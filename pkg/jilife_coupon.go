@@ -144,6 +144,7 @@ func (p JiLifeCoupon) sendRequest(ctx context.Context, path string, body []byte)
 		return nil, err
 	}
 	var resp *http.Response
+	log.Printf("POST %s %s\n", url, string(body))
 	resp, err = p.httpClient.Do(req)
 	if err != nil {
 		return nil, err
