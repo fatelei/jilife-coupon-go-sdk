@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	jilife "github.com/fatelei/jilife-coupon-go-sdk/pkg"
+	"time"
 )
 
 func main() {
@@ -25,7 +26,7 @@ func main() {
 	flag.StringVar(&planNo, "planNo", "", "plan no") // CPP230202000009535
 	flag.Parse()
 
-	ctl := jilife.NewJiLifeCoupon(appID, appKey, endpoint, "test")
+	ctl := jilife.NewJiLifeCoupon(appID, appKey, endpoint, "red_envelope", time.Second*10)
 	if cmd == "issueCoupon" {
 		if len(appID) > 0 && len(appKey) > 0 && len(endpoint) > 0 && len(phone) > 0 && len(orderID) > 0 && len(planNo) > 0 {
 			resp, err := ctl.IssueCoupons(context.Background(), orderID, phone, jilife.TelReqType, []string{planNo})

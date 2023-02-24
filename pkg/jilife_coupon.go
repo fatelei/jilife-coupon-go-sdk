@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"sort"
 	"strconv"
@@ -31,6 +32,8 @@ type JiLifeCoupon struct {
 	endpoint   string
 	reqSource  string
 	reqVersion string
+	timeout    time.Duration
+	httpClient *http.Client
 }
 
 type JiLifeCallback struct {
@@ -70,6 +73,8 @@ type IssueCouponResponse struct {
 	Success    bool     `json:"success"`
 	Message    string   `json:"message"`
 	Obj        []Coupon `json:"obj,omitempty"`
+	StatusCode int      `json:"status,omitempty"`
+	Error      string   `json:"error,omitempty"`
 }
 
 func PKCSPadding(plaintext []byte, blockSize int) []byte {
@@ -84,13 +89,14 @@ func PKCSUnPadding(origData []byte) []byte {
 	return origData[:(length - unpadding)]
 }
 
-func NewJiLifeCoupon(appID, appKey, endpoint, reqSource string) *JiLifeCoupon {
+func NewJiLifeCoupon(appID, appKey, endpoint, reqSource string, timeout time.Duration) *JiLifeCoupon {
 	return &JiLifeCoupon{
 		appID:      appID,
 		appKey:     appKey,
 		endpoint:   endpoint,
 		reqSource:  reqSource,
 		reqVersion: "V1.0.0",
+		httpClient: &http.Client{Timeout: timeout},
 	}
 }
 
@@ -125,7 +131,6 @@ func (p JiLifeCoupon) signParam(param map[string]interface{}) string {
 	}
 	queryAry = append(queryAry, p.appKey)
 	value := strings.Join(queryAry, "&")
-	println(value)
 	hash := md5.Sum([]byte(value))
 	return strings.ToUpper(hex.EncodeToString(hash[:]))
 }
@@ -139,7 +144,7 @@ func (p JiLifeCoupon) sendRequest(ctx context.Context, path string, body []byte)
 		return nil, err
 	}
 	var resp *http.Response
-	resp, err = http.DefaultClient.Do(req)
+	resp, err = p.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -166,6 +171,7 @@ func (p JiLifeCoupon) IssueCoupons(ctx context.Context, businessNo, reqData stri
 		if err != nil {
 			return nil, err
 		}
+		log.Printf("raw resp %s\n", string(rawResp))
 		var couponResp IssueCouponResponse
 		if err = json.Unmarshal(rawResp, &couponResp); err != nil {
 			return nil, err
